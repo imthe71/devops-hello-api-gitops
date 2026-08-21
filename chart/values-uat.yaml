@@ -1,6 +1,10 @@
 # UAT environment overrides.
-# Base settings, including image.tag, remain in values.yaml and are updated by CI.
+# CI updates this immutable tag first. Production retains chart/values.yaml
+# until an explicit promotion is approved.
 replicaCount: 1
+
+image:
+  tag: "ff7c93fb01f090653a9158eb27b8b5479ddae623"
 
 ingress:
   host: uat.hello-api.test

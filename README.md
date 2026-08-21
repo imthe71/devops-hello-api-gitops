@@ -52,5 +52,13 @@ Bootstrap it once after this repository change is available on main:
 
     kubectl apply -f argocd/application-uat.yaml
 
-UAT inherits image.tag from chart/values.yaml, so each successful App Repo
-CI run updates production and UAT to the same immutable image revision.
+## Environment promotion
+
+- chart/values-uat.yaml is the UAT deployment record. App Repo CI updates this
+  immutable image tag after tests and an image push.
+- chart/values.yaml is the production deployment record. It changes only through
+  the GitHub Actions "Promote UAT image to production" workflow.
+
+To promote, open Actions in this GitOps repository, run the promotion workflow,
+and enter the exact UAT image tag shown by Argo CD or in values-uat.yaml. The
+production Argo CD Application will then reconcile that commit automatically.
