@@ -1,0 +1,5 @@
+# Local-only override to deploy the image loaded into kind before CI publishes it to GHCR.
+image:
+  repository: devops-hello-api
+  tag: local
+  pullPolicy: Never

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hello-api
+version: 0.1.0
+description: Helm chart for the Hello DevOps FastAPI application
+type: application
+appVersion: "1.0.0"
