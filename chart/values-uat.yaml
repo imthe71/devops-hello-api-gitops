@@ -1,7 +1,7 @@
 # UAT environment overrides.
 # CI updates this immutable tag first. Production retains chart/values.yaml
 # until an explicit promotion is approved.
-replicaCount: 1
+replicaCount: 2
 
 image:
   tag: "0802882c8c30f5110dea708a7570ee19757a5438"
