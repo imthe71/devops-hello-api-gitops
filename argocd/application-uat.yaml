@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-api-uat
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/imthe71/devops-hello-api-gitops.git
+    targetRevision: main
+    path: chart
+    helm:
+      releaseName: hello-api-uat
+      valueFiles:
+        - values-uat.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hello-api-uat
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

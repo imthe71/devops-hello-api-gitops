@@ -1,0 +1,6 @@
+# UAT environment overrides.
+# Base settings, including image.tag, remain in values.yaml and are updated by CI.
+replicaCount: 1
+
+ingress:
+  host: uat.hello-api.test

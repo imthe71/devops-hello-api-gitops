@@ -38,3 +38,19 @@ The cross-repository CI update uses the `GITOPS_REPO_TOKEN` GitHub Actions secre
 ## Challenge and resolution
 
 A local kind cluster demonstrates Pod-level resilience through multiple replicas, readiness gates, a PDB, and rolling updates. It uses one Docker Desktop host, so physical-host or availability-zone resilience belongs to a production cluster design.
+
+## UAT environment
+
+The hello-api-uat Argo CD Application deploys the same Helm chart to the
+hello-api-uat namespace, with an isolated Helm release and ingress hostname:
+
+- URL: http://uat.hello-api.test/
+- Argo CD application: hello-api-uat
+- overrides: chart/values-uat.yaml
+
+Bootstrap it once after this repository change is available on main:
+
+    kubectl apply -f argocd/application-uat.yaml
+
+UAT inherits image.tag from chart/values.yaml, so each successful App Repo
+CI run updates production and UAT to the same immutable image revision.
