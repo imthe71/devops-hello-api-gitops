@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: ghcr.io/imthe71/devops-hello-api
-  tag: "bootstrap"
+  tag: "ff7c93fb01f090653a9158eb27b8b5479ddae623"
   pullPolicy: IfNotPresent
 
 service:
