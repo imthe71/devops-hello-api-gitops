@@ -4,7 +4,7 @@
 replicaCount: 1
 
 image:
-  tag: "ff7c93fb01f090653a9158eb27b8b5479ddae623"
+  tag: "0802882c8c30f5110dea708a7570ee19757a5438"
 
 ingress:
   host: uat.hello-api.test
