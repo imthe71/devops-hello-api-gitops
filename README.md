@@ -117,6 +117,15 @@ kubectl --context kind-devops-demo -n hello-api get hpa,pods -w
   let Argo CD sync. Rotation creates a new Deployment revision because the
   injected Secret reference remains available during the rollout.
 
+## Future EKS secret architecture
+
+The accepted EKS design is AWS Secrets Manager with EKS Pod Identity and the
+Secrets Store CSI Driver. Runtime secrets will be mounted as read-only files at
+`/mnt/secrets-store`; the GitHub Actions Runner will deploy references only and
+will not read runtime secret values. See
+[`docs/adr/0001-aws-secrets-manager-csi.md`](docs/adr/0001-aws-secrets-manager-csi.md)
+for the IAM boundaries, RD contract, rotation, verification, and rollback plan.
+
 ## Implementation note
 
 The cross-repository CI update uses the `GITOPS_REPO_TOKEN` GitHub Actions secret. It should be a fine-grained token limited to `Contents: Read and write` for this GitOps repository.
