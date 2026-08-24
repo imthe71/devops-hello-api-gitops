@@ -18,6 +18,10 @@ spec:
     metadata:
       labels:
         {{- include "hello-api.selectorLabels" . | nindent 8 }}
+      {{- if .Values.secrets.runtime.enabled }}
+      annotations:
+        checksum/runtime-secret: {{ .Values.secrets.runtime.encryptedValue | sha256sum }}
+      {{- end }}
     spec:
       topologySpreadConstraints:
         - maxSkew: 1
@@ -50,6 +54,13 @@ spec:
           env:
             - name: APP_VERSION
               value: {{ .Values.image.tag | quote }}
+            {{- if .Values.secrets.runtime.enabled }}
+            - name: {{ .Values.secrets.runtime.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.runtime.name }}
+                  key: {{ .Values.secrets.runtime.key }}
+            {{- end }}
           startupProbe:
             httpGet:
               path: /healthz

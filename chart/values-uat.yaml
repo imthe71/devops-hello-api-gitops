@@ -6,6 +6,12 @@ replicaCount: 2
 image:
   tag: "0802882c8c30f5110dea708a7570ee19757a5438"
 
+# Generated against the UAT controller public certificate. Never copy the
+# production value here: strict scope binds ciphertext to its namespace/name.
+secrets:
+  runtime:
+    encryptedValue: "AgC6fm1byG52INl74r1+Sf1XkFV4ESEZ31gh8AMHWEB0ZVXv/2McNzUA1Q3SPq5KSY+j4Psggfkv1XKSa7oX6BYLxQ16pOakAMVPacm2LsPrDZWqQgShMHJ+kiAk1GzHJg2CIhb5n0R1Omli9WxTyz/oLEcjFm4xH++SMOLHUsABHhM6VUJd1VGpW2KsePWWTGMeQBFVJAvcNUVIGBXMpwoj86z+ozBo9l4BXZHzgZftJrayUJuO9bWa91i/57Cr+zz2WvPwhukSOIVyQkKoiw3Kj0AQ0sjpJdh92IuxiIh55xKsAqzFwZysohhzJeMn+DMmG4XduSvey5MxrV5mjagMW9L1nrvfYUEWg2jvR+5iB9adApnYKZwVttO3dHoL/OXOcmbIQujuvzUIM9Ep9IZJ5idewGI1tl5slYaIJMJz3Pjag3EXXfzS1wASMbSxbvxE64c0xnUKqI9YkCJfa2VSZk2JRAVNKGgj2TTeW9yHu4LTL/hH39KI1Hy2eCCywmROzFtVIzhFhGWqNrFR92o5wiSZAS7f/1t5W6id9wtEcT3wa9exAqiOXl5TJ88bMlRXPrDNdYlN2f6Tw1is/iN8ZwyWpbhvWmzrUc9t88wzl6HOXrbD2wGHu2mQOPAFbxvOpy5HICYKxfRdy0k1wljn+Dfi3z+owqgXcxPG2WYDg+1vcxqT/guNex3qKPZpjQNtF4FCATTNrFtvWr3Dv7oPCWXjVIz+tqzvck9lAZA/lEz7j1NWud5RTlhPyg=="
+
 # UAT has no required anti-affinity, so retain zero-unavailable rolling updates.
 strategy:
   rollingUpdate:

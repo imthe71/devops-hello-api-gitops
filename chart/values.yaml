@@ -11,6 +11,15 @@ service:
 
 imagePullSecrets: []
 
+# Git only stores the ciphertext. sealed-secrets-controller decrypts it into
+# the namespaced Kubernetes Secret consumed by the Deployment at runtime.
+secrets:
+  runtime:
+    enabled: true
+    name: hello-api-runtime
+    key: APP_DEMO_TOKEN
+    encryptedValue: "AgBDrLQ3eil2OpbGL22GlzEGof1aMJ5XgOHJsGdT3hrD0vIVvN7Jd7ZET+0Tk1vIZ4TP188gPkJbTCd0jVqIZX1LWdoXeXxCiaQeBa6u0f9K72mWa4soCwgbOJWV13aC8ZHra5eRA/rrYm99lj4TrRp40EVjbrfFrRwbR7Nfj1vbVCrauZbCtjuC7u+SqbbU6XVAW6XHz2m5f8Q5jmql+nmCE5YEbxv/2wQojHODaFd25g2ulXHWYOB5auxTRGP/0JfZChnzdTxfdumm5s3ipA4BXN8bGm7IFeZUqwpJ0cqAQMJNiJ3ij7HJpIzQTGqDK2b49OR9JzH61KujFjWhgsPwxR/ZGfcBnUSnzxjHRWr4Fmjhq58C9DfT6biU3TYC6mmkyk/NWNSTggRXCd7WYD+aGcH9AdU2jdKvBzdFh2YqFx6xgbsxeVx2YCFJ1ygbMKMI3Dqb2px5KADD8cDJfb3Scb63/WXF6PyOm7hUR7TgcLPJUmquYP3Qfd1/S8nN8wSPapKDWwVT2J8vu2mqnzMJ9qClbdhP3jriZnxbXSpQIfL4n05Bb0r/1/Gn/t4TOcuqryLSR4zXj8hDkxcV5tBORaSuz9XJUCQ3tBzA7FoNRFeec9Czq6RBg/vySsorVxyAtxcYalco4ID0rW4bm/6ZmqDJRQsrtRlKwrwHP/AxgtL1MRmuMqQd2ZI1eLXmb8PcR0P3wre3MUV471y3y3DozKtoGxNwxKOWgnmltt8Gv4a1oKxzj7LN2rVtaw=="
+
 strategy:
   rollingUpdate:
     # With two workers and required pod anti-affinity, release one old Pod

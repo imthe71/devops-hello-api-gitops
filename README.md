@@ -22,6 +22,7 @@ flowchart LR
 - Helm chart: Deployment, Service, Ingress, PodDisruptionBudget, and a CPU-based HorizontalPodAutoscaler (HPA).
 - Deployment and HPA: baseline is two replicas; HPA scales from `2` to `3` at `70%` average CPU utilization. Resource requests provide the utilization baseline, and startup/liveness/readiness probes protect availability. UAT uses zero-unavailable rolling updates. Production uses hard topology spread across its two workers with a one-at-a-time rollout (`maxUnavailable: 1`, `maxSurge: 0`) protected by `PDB minAvailable: 1`; at three replicas it has a balanced `2 + 1` Worker placement.
 - Argo CD Application: watches this repository and reconciles changes into its target namespace. It explicitly leaves `Deployment.spec.replicas` to the HPA, so automated self-heal does not reset autoscaled replica counts.
+- Sealed Secrets: each Cluster runs a `sealed-secrets-controller`. Git stores only environment-scoped ciphertext; the controller creates the `hello-api-runtime` Kubernetes Secret that supplies `APP_DEMO_TOKEN` to the application.
 
 ## Local topology
 
@@ -58,6 +59,10 @@ separate UAT cluster with the additional configuration:
 
 ```powershell
 kind create cluster --name devops-uat --config kind-config-uat.yaml
+
+# Install the Sealed Secrets CRD and controller in both clusters before Argo
+# applies the Helm chart. The script pins controller release v0.39.1.
+.\bootstrap\install-sealed-secrets.ps1
 
 helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx `
   --namespace ingress-nginx --create-namespace `
@@ -98,6 +103,19 @@ curl.exe -H "Host: hello-api.test" http://127.0.0.1/healthz
 kubectl --context kind-devops-uat -n hello-api-uat get hpa,pods -w
 kubectl --context kind-devops-demo -n hello-api get hpa,pods -w
 ```
+
+## Secret lifecycle
+
+- `chart/values.yaml` and `chart/values-uat.yaml` contain only encrypted
+  `APP_DEMO_TOKEN` values. Each ciphertext is bound to its exact Secret name
+  and namespace, and is generated with the public certificate of its owning
+  Cluster.
+- The plaintext exists only when creating or rotating the Secret; do not commit
+  a Kubernetes `Secret` manifest, a `.env` file, or a plaintext values file.
+- To rotate a value, generate a new `SealedSecret` with `kubeseal` against the
+  target Cluster, replace that environment's `encryptedValue`, commit it, and
+  let Argo CD sync. Rotation creates a new Deployment revision because the
+  injected Secret reference remains available during the rollout.
 
 ## Implementation note
 
