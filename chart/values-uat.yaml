@@ -12,6 +12,12 @@ strategy:
     maxUnavailable: 0
     maxSurge: 1
 
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
 # The local UAT cluster has one worker, so two replicas must be allowed to
 # co-locate while retaining Pod-level resilience.
 topologySpread:

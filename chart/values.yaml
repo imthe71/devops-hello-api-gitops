@@ -30,15 +30,22 @@ resources:
 podDisruptionBudget:
   minAvailable: 1
 
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
 # Production has two schedulable workers, so enforce one matching Pod per
 # node whenever capacity permits. UAT overrides this because it has one worker.
 topologySpread:
   whenUnsatisfiable: DoNotSchedule
 
-# Required anti-affinity makes the production two-replica layout an invariant:
-# matching Pods must occupy different worker hostnames.
+# Strict topology spread keeps the baseline two replicas on separate workers.
+# It is not hard anti-affinity because a third HPA replica must be able to use
+# one of the two workers, producing a balanced 2+1 placement.
 podAntiAffinity:
-  required: true
+  required: false
 
 ingress:
   enabled: true

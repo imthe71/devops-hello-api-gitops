@@ -1,0 +1,4 @@
+# kind nodes use locally issued kubelet certificates. This enables the Metrics
+# API used by kubectl top, K9s CPU/Memory views, and HorizontalPodAutoscaler.
+args:
+  - --kubelet-insecure-tls
