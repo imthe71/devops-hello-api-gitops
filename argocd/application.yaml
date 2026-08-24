@@ -14,9 +14,16 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: hello-api
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: hello-api-hello-api
+      jsonPointers:
+        - /spec/replicas
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - RespectIgnoreDifferences=true
