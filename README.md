@@ -20,7 +20,7 @@ flowchart LR
 ## Components
 
 - Helm chart: Deployment, Service, Ingress, and PodDisruptionBudget.
-- Deployment: two replicas, resource requests/limits, startup/liveness/readiness probes, and zero-unavailable rolling updates.
+- Deployment: two replicas, resource requests/limits, and startup/liveness/readiness probes. UAT uses zero-unavailable rolling updates; production uses required Pod anti-affinity and topology spread across its two workers, with a one-at-a-time rollout (`maxUnavailable: 1`, `maxSurge: 0`) protected by `PDB minAvailable: 1`.
 - ArgoCD Application: watches this repository and reconciles changes into the `hello-api` namespace.
 
 ## Local topology
@@ -93,7 +93,7 @@ The cross-repository CI update uses the `GITOPS_REPO_TOKEN` GitHub Actions secre
 
 ## Challenge and resolution
 
-A local kind cluster demonstrates Pod-level resilience through multiple replicas, readiness gates, a PDB, and rolling updates. It uses one Docker Desktop host, so physical-host or availability-zone resilience belongs to a production cluster design.
+The local topology demonstrates Pod-level resilience in UAT and Worker-level placement resilience in production through multiple replicas, readiness gates, a PDB, topology spread, and required Pod anti-affinity. Both kind clusters still use one Docker Desktop host, so physical-host or availability-zone resilience belongs to a production cluster design.
 ## UAT and production release flow
 
 - UAT Application: `hello-api-uat` in the `hello-api-uat` namespace of
