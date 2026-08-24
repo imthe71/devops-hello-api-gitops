@@ -1,6 +1,6 @@
 # UAT environment overrides.
-# CI updates this immutable tag first. Production retains chart/values.yaml
-# until an explicit promotion is approved.
+# The manual Deploy selected revision to UAT workflow updates this immutable tag.
+# Production retains chart/values.yaml until a validated change is merged into main.
 replicaCount: 2
 
 image:
