@@ -30,6 +30,15 @@ spec:
           labelSelector:
             matchLabels:
               {{- include "hello-api.selectorLabels" . | nindent 14 }}
+      {{- if .Values.podAntiAffinity.required }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  {{- include "hello-api.selectorLabels" . | nindent 18 }}
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
       containers:
         - name: hello-api
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

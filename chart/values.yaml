@@ -32,6 +32,11 @@ podDisruptionBudget:
 topologySpread:
   whenUnsatisfiable: DoNotSchedule
 
+# Required anti-affinity makes the production two-replica layout an invariant:
+# matching Pods must occupy different worker hostnames.
+podAntiAffinity:
+  required: true
+
 ingress:
   enabled: true
   className: nginx

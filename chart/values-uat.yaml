@@ -11,5 +11,8 @@ image:
 topologySpread:
   whenUnsatisfiable: ScheduleAnyway
 
+podAntiAffinity:
+  required: false
+
 ingress:
   host: uat.hello-api.test
