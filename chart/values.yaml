@@ -27,6 +27,11 @@ resources:
 podDisruptionBudget:
   minAvailable: 1
 
+# Production has two schedulable workers, so enforce one matching Pod per
+# node whenever capacity permits. UAT overrides this because it has one worker.
+topologySpread:
+  whenUnsatisfiable: DoNotSchedule
+
 ingress:
   enabled: true
   className: nginx

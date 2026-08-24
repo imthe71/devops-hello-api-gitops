@@ -22,7 +22,7 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+          whenUnsatisfiable: {{ .Values.topologySpread.whenUnsatisfiable }}
           labelSelector:
             matchLabels:
               {{- include "hello-api.selectorLabels" . | nindent 14 }}

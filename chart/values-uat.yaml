@@ -6,5 +6,10 @@ replicaCount: 2
 image:
   tag: "0802882c8c30f5110dea708a7570ee19757a5438"
 
+# The local UAT cluster has one worker, so two replicas must be allowed to
+# co-locate while retaining Pod-level resilience.
+topologySpread:
+  whenUnsatisfiable: ScheduleAnyway
+
 ingress:
   host: uat.hello-api.test
