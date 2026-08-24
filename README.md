@@ -19,9 +19,9 @@ flowchart LR
 
 ## Components
 
-- Helm chart: Deployment, Service, Ingress, and PodDisruptionBudget.
-- Deployment: two replicas, resource requests/limits, and startup/liveness/readiness probes. UAT uses zero-unavailable rolling updates; production uses required Pod anti-affinity and topology spread across its two workers, with a one-at-a-time rollout (`maxUnavailable: 1`, `maxSurge: 0`) protected by `PDB minAvailable: 1`.
-- ArgoCD Application: watches this repository and reconciles changes into the `hello-api` namespace.
+- Helm chart: Deployment, Service, Ingress, PodDisruptionBudget, and a CPU-based HorizontalPodAutoscaler (HPA).
+- Deployment and HPA: baseline is two replicas; HPA scales from `2` to `3` at `70%` average CPU utilization. Resource requests provide the utilization baseline, and startup/liveness/readiness probes protect availability. UAT uses zero-unavailable rolling updates. Production uses hard topology spread across its two workers with a one-at-a-time rollout (`maxUnavailable: 1`, `maxSurge: 0`) protected by `PDB minAvailable: 1`; at three replicas it has a balanced `2 + 1` Worker placement.
+- Argo CD Application: watches this repository and reconciles changes into its target namespace. It explicitly leaves `Deployment.spec.replicas` to the HPA, so automated self-heal does not reset autoscaled replica counts.
 
 ## Local topology
 
@@ -64,6 +64,14 @@ helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx `
   --kube-context kind-devops-uat `
   --values bootstrap/ingress-nginx-values.yaml --wait
 
+# Install Metrics Server in each cluster; required by HPA and K9s CPU/MEM views.
+helm upgrade --install metrics-server metrics-server/metrics-server `
+  --namespace kube-system --kube-context kind-devops-uat `
+  --values bootstrap/metrics-server-values.yaml --wait
+helm upgrade --install metrics-server metrics-server/metrics-server `
+  --namespace kube-system --kube-context kind-devops-demo `
+  --values bootstrap/metrics-server-values.yaml --wait
+
 kubectl --context kind-devops-uat create namespace argocd
 kubectl --context kind-devops-uat apply --server-side --force-conflicts `
   -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.1/manifests/install.yaml
@@ -85,6 +93,10 @@ Verify workload health without depending on the Windows hosts mapping:
 ```powershell
 curl.exe -H "Host: uat.hello-api.test" http://127.0.0.1:8082/healthz
 curl.exe -H "Host: hello-api.test" http://127.0.0.1/healthz
+
+# Watch autoscaling in either environment.
+kubectl --context kind-devops-uat -n hello-api-uat get hpa,pods -w
+kubectl --context kind-devops-demo -n hello-api get hpa,pods -w
 ```
 
 ## Implementation note
@@ -93,7 +105,7 @@ The cross-repository CI update uses the `GITOPS_REPO_TOKEN` GitHub Actions secre
 
 ## Challenge and resolution
 
-The local topology demonstrates Pod-level resilience in UAT and Worker-level placement resilience in production through multiple replicas, readiness gates, a PDB, topology spread, and required Pod anti-affinity. Both kind clusters still use one Docker Desktop host, so physical-host or availability-zone resilience belongs to a production cluster design.
+The local topology demonstrates Pod-level resilience in UAT and Worker-level placement resilience in production through two baseline replicas, readiness gates, a PDB, topology spread, and HPA. Both kind clusters still use one Docker Desktop host, so physical-host or availability-zone resilience belongs to a production cluster design.
 ## UAT and production release flow
 
 - UAT Application: `hello-api-uat` in the `hello-api-uat` namespace of
