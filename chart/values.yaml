@@ -13,8 +13,11 @@ imagePullSecrets: []
 
 strategy:
   rollingUpdate:
-    maxUnavailable: 0
-    maxSurge: 1
+    # With two workers and required pod anti-affinity, release one old Pod
+    # before scheduling its replacement on that worker. PDB still guarantees
+    # one available Pod throughout the rollout.
+    maxUnavailable: 1
+    maxSurge: 0
 
 resources:
   requests:
