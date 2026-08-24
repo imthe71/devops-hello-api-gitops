@@ -38,27 +38,22 @@ The cross-repository CI update uses the `GITOPS_REPO_TOKEN` GitHub Actions secre
 ## Challenge and resolution
 
 A local kind cluster demonstrates Pod-level resilience through multiple replicas, readiness gates, a PDB, and rolling updates. It uses one Docker Desktop host, so physical-host or availability-zone resilience belongs to a production cluster design.
+## UAT and production release flow
 
-## UAT environment
+- UAT Application: hello-api-uat in the hello-api-uat namespace, using
+  chart/values-uat.yaml and http://uat.hello-api.test/.
+- Production Application: hello-api in the hello-api namespace, using
+  chart/values.yaml and http://hello-api.test/.
 
-The hello-api-uat Argo CD Application deploys the same Helm chart to the
-hello-api-uat namespace, with an isolated Helm release and ingress hostname:
+1. Push a feature branch: CI runs tests only.
+2. In the App Repo Actions page, run "Deploy selected revision to UAT" and enter
+   the feature branch, tag, or immutable commit SHA. The workflow tests, builds,
+   publishes, and writes that image tag to values-uat.yaml.
+3. Argo CD deploys the GitOps commit automatically to UAT.
+4. After UAT acceptance, merge the pull request into main.
+5. The main CI tests, builds, publishes, and writes the resulting image tag to
+   values.yaml. Argo CD then deploys it automatically to production.
 
-- URL: http://uat.hello-api.test/
-- Argo CD application: hello-api-uat
-- overrides: chart/values-uat.yaml
-
-Bootstrap it once after this repository change is available on main:
-
-    kubectl apply -f argocd/application-uat.yaml
-
-## Environment promotion
-
-- chart/values-uat.yaml is the UAT deployment record. App Repo CI updates this
-  immutable image tag after tests and an image push.
-- chart/values.yaml is the production deployment record. It changes only through
-  the GitHub Actions "Promote UAT image to production" workflow.
-
-To promote, open Actions in this GitOps repository, run the promotion workflow,
-and enter the exact UAT image tag shown by Argo CD or in values-uat.yaml. The
-production Argo CD Application will then reconcile that commit automatically.
+The same GitOps repository remains the auditable desired-state source for both
+environments. The App Repo uses the GITOPS_REPO_TOKEN secret with Contents:
+Read and write permission only for this GitOps repository.
