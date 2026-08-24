@@ -23,6 +23,10 @@ spec:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: {{ .Values.topologySpread.whenUnsatisfiable }}
+          # Exclude the tainted control-plane from the skew calculation.
+          # Otherwise its zero matching Pods would block a 2-worker rollout.
+          nodeAffinityPolicy: Honor
+          nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
               {{- include "hello-api.selectorLabels" . | nindent 14 }}
