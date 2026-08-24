@@ -23,13 +23,69 @@ flowchart LR
 - Deployment: two replicas, resource requests/limits, startup/liveness/readiness probes, and zero-unavailable rolling updates.
 - ArgoCD Application: watches this repository and reconciles changes into the `hello-api` namespace.
 
-## Local verification
+## Local topology
 
-1. Create kind from `kind-config.yaml`.
-2. Install ingress-nginx and ArgoCD.
-3. Apply `argocd/application.yaml`.
-4. Bind `127.0.0.1 hello-api.test` in Windows hosts.
-5. Check `http://hello-api.test/` and `http://hello-api.test/healthz`.
+The local proof-of-concept uses two independently managed kind clusters.
+
+```text
+kind-devops-demo (production)
+├─ control-plane
+├─ worker
+└─ worker2
+
+kind-devops-uat (UAT)
+├─ control-plane
+└─ worker
+```
+
+- Production ingress: `http://hello-api.test/` (host port `80`)
+- UAT ingress: `http://uat.hello-api.test:8082/` (host port `8082`)
+- Production Argo CD: `https://localhost:8080`
+- UAT Argo CD: `https://localhost:8083`
+
+Add these mappings to the Windows hosts file when you want browser-friendly
+hostnames:
+
+```text
+127.0.0.1 hello-api.test
+127.0.0.1 uat.hello-api.test
+```
+
+## Bootstrap and verification
+
+The existing production cluster is created from `kind-config.yaml`. Create a
+separate UAT cluster with the additional configuration:
+
+```powershell
+kind create cluster --name devops-uat --config kind-config-uat.yaml
+
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx `
+  --namespace ingress-nginx --create-namespace `
+  --kube-context kind-devops-uat `
+  --values bootstrap/ingress-nginx-values.yaml --wait
+
+kubectl --context kind-devops-uat create namespace argocd
+kubectl --context kind-devops-uat apply --server-side --force-conflicts `
+  -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.1/manifests/install.yaml
+kubectl --context kind-devops-uat apply -f argocd/application-uat.yaml
+```
+
+Keep each Argo CD Application in its owning cluster:
+
+```powershell
+# UAT only
+kubectl --context kind-devops-uat apply -f argocd/application-uat.yaml
+
+# Production only
+kubectl --context kind-devops-demo apply -f argocd/application.yaml
+```
+
+Verify workload health without depending on the Windows hosts mapping:
+
+```powershell
+curl.exe -H "Host: uat.hello-api.test" http://127.0.0.1:8082/healthz
+curl.exe -H "Host: hello-api.test" http://127.0.0.1/healthz
+```
 
 ## Implementation note
 
@@ -40,10 +96,11 @@ The cross-repository CI update uses the `GITOPS_REPO_TOKEN` GitHub Actions secre
 A local kind cluster demonstrates Pod-level resilience through multiple replicas, readiness gates, a PDB, and rolling updates. It uses one Docker Desktop host, so physical-host or availability-zone resilience belongs to a production cluster design.
 ## UAT and production release flow
 
-- UAT Application: hello-api-uat in the hello-api-uat namespace, using
-  chart/values-uat.yaml and http://uat.hello-api.test/.
-- Production Application: hello-api in the hello-api namespace, using
-  chart/values.yaml and http://hello-api.test/.
+- UAT Application: `hello-api-uat` in the `hello-api-uat` namespace of
+  `kind-devops-uat`, using `chart/values-uat.yaml` and
+  `http://uat.hello-api.test:8082/`.
+- Production Application: `hello-api` in the `hello-api` namespace of
+  `kind-devops-demo`, using `chart/values.yaml` and `http://hello-api.test/`.
 
 1. Push a feature branch: CI runs tests only.
 2. In the App Repo Actions page, run "Deploy selected revision to UAT" and enter

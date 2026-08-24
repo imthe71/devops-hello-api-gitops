@@ -1,0 +1,14 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+# Local UAT cluster. Host ports differ from devops-demo (production),
+# allowing both clusters to run at the same time.
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8082
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 8445
+        protocol: TCP
+  - role: worker
