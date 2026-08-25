@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/imthe71/devops-hello-api
+  repository: ghcr.io/imthe71/devops-hello-api-private
   tag: "981f5aabcfa1b8fb283a20a1bdad3351a29a3df0"
   pullPolicy: IfNotPresent
 
@@ -9,7 +9,16 @@ service:
   type: ClusterIP
   port: 80
 
-imagePullSecrets: []
+imagePullSecrets:
+  - name: ghcr-pull
+
+# Ciphertext is generated once per cluster/namespace with kubeseal and stored
+# in the environment values file. The resulting Secret authenticates kubelet
+# image pulls from the private GHCR package.
+registryCredentials:
+  enabled: true
+  name: ghcr-pull
+  encryptedDockerConfigJson: "AgBLdncg0uLrB2Z5JZ0eurVnj+43LijJcFGDdH1Xq9Waw10VGZgdzS5OhTyO3NuZKKNWkvti/uGpfizJKIajo3nsjitA9SL2NtnV/6Yy1lTmyk+Tf3MCn1tSVU3z89fl+NRm8ub9J8u3i6Hztb1x5IQQ9o4g/+AiuRKc1pn9ad7LTjnyu61JxtB2gOeyvHhf2RDD/BkGVOgok6t73NsWeDjBxsnWAUHz0z8JFXMhWs6yks/hFbSGJvCobkc0ef1JyYVfop5Bag4uKma1z4U5TJVqsU+Y1OxuBjKhZZo4z/qbFcSNpDHF6tlOHjdsNCNdpGm/HATibjeJVCvQs1wY/HEbIHyWtGlhAf2n/aEytcD8Ilj1DFyow7kX1rLfDOh199urP+RmT0xZdEn53/Z7iFLiKepssboE5CIIuwuOdMomcSQ4pkYw0fvuR26UIrlG4f1cHMbeTtg3yqBFCf5l+OPnIyAk3PTRKSVJSey/7lr2CmAo3JOOpXv18aYvYUZbyHnOBk/KOnYSykK8nykvXZTgKpgN1NMTPrCi6qLeyzJ+HqXNsMmzePl5BNH1pmqaR2VGv8CK5o5APjvPdKpeKkuJxAVgUSIb1PZYYwye0XFzJFI8Tf2RI6yB3hr82n4n/tP+29522pwnO/nCsjK+Yrl+bWD3zTAO1j+a3AP1F1/QNgBhNF/1vNRpEru3xxA23KXv7Z4u7DONTHcAkIs0rJ58V6gx6OfDYg31ryGDZImfjUvWatcccrKekB1ZZjgDnwV1gXlWkHqizwEJg8OeAMBCv6FUgC9y3FTERgs7uUitXYpKYT/8/uEa2sUc/oWSPZdFvQDKihDg6S7oQz5Er1dRjxWpsUu2T81qP8f3tHoSPrgW+MW9uG8AvcGqFXr8pXCsKnxax1ZBogh1A9E1cwyAA++ex1720zW09OrH"
 
 # Git only stores the ciphertext. sealed-secrets-controller decrypts it into
 # the namespaced Kubernetes Secret consumed by the Deployment at runtime.
