@@ -82,6 +82,8 @@ curl.exe -H "Host: uat.hello-api.test" http://127.0.0.1:8082/db-status
 
 ## 注意事項
 
+- UAT 有 1 個 Worker Node，主要用來驗證功能與發版流程；正式環境有 2 個 Worker Node，應用程式 Pod 可以分散部署。UAT 不具備 Worker Node 層級的 HA，正式環境則可承受單一 Worker 的維護或故障。
+- 兩個環境目前都只有 1 個 Control Plane，這是本地 kind Demo 的限制。
 - 私有 GHCR 的拉取權限與應用程式參數都由 SealedSecret 產生，明文不放進 Git。
 - 兩個 kind Cluster 仍共用同一台 Docker Desktop Host；雲端正式環境可再升級為多可用區 Node Pool、受管資料庫與外部 Secret Store。
 - 建立 Cluster、Ingress、Metrics Server、Sealed Secrets 的設定檔放在 `kind-config*.yaml` 與 `bootstrap/`。
