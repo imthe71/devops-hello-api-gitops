@@ -4,7 +4,7 @@
 replicaCount: 2
 
 image:
-  tag: "75515d2bc6e85508c45b5fe4121be022f527d163"
+  tag: "1fc1d8642b4a303dbb78f9631cf3e3442e718f9a"
 
 # Generated against the UAT controller public certificate. Never copy the
 # production value here: strict scope binds ciphertext to its namespace/name.
