@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: ghcr.io/imthe71/devops-hello-api-private
-  tag: "93d39d078bf872142cadaf7b542214895d44ef51"
+  tag: "644ff56857eebcf97aef16fce9991e13fbb2e93a"
   pullPolicy: IfNotPresent
 
 service:
