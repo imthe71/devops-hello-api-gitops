@@ -55,7 +55,7 @@ Image Tag 使用 commit SHA，不使用會漂移的 `latest`。要回滾時，�
 - **Service / Ingress**：叢集內連線與網域路由。
 - **HPA / PDB**：預設 2 個 Pod，CPU 70% 時最多擴至 3 個，維護時至少保留 1 個可用 Pod。
 - **PostgreSQL StatefulSet / PVC**：資料庫 Pod 重建後仍使用原本的 1Gi 儲存空間。
-- **SealedSecret**：Git 只保存密文；Cluster 內才會還原為 Kubernetes Secret。
+- **SealedSecret**：Git 只保存密文；Cluster 內才會還原為 Kubernetes Secret。詳細流程見：[Sealed Secrets 加密與使用方式](docs/sealed-secrets.md)。
 
 正式環境另有 topology spread，會盡量將應用程式 Pod 分散到兩個 Worker Node。
 
