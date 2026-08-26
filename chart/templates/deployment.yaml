@@ -65,6 +65,27 @@ spec:
                   name: {{ .Values.secrets.runtime.name }}
                   key: {{ .Values.secrets.runtime.key }}
             {{- end }}
+            {{- if .Values.postgres.enabled }}
+            - name: DATABASE_HOST
+              value: {{ printf "%s-postgres" (include "hello-api.fullname" .) | quote }}
+            - name: DATABASE_PORT
+              value: {{ .Values.postgres.service.port | quote }}
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.auth.secretName }}
+                  key: POSTGRES_DB
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.auth.secretName }}
+                  key: POSTGRES_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.auth.secretName }}
+                  key: POSTGRES_PASSWORD
+            {{- end }}
           startupProbe:
             httpGet:
               path: /healthz
