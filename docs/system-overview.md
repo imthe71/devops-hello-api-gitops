@@ -1,128 +1,128 @@
-# System Architecture and Delivery Flow
+# 系統架構與交付流程
 
-This document describes the architecture, delivery model, security boundaries, and operational verification for the Hello API GitOps implementation.
+本文說明 Hello API GitOps 專案的系統架構、交付模型、安全邊界與驗證方式。
 
-## Architecture
+## 系統架構
 
 ```mermaid
 flowchart LR
-    Developer[Developer] --> AppRepo[Application Repository]
+    Developer[開發人員] --> AppRepo[應用程式 Repository]
     AppRepo --> CI[GitHub Actions]
-    CI --> Registry[Private GHCR]
+    CI --> Registry[私有 GHCR]
     CI --> GitOpsRepo[GitOps Repository]
 
-    GitOpsRepo --> ArgoUAT[Argo CD: UAT]
-    GitOpsRepo --> ArgoProd[Argo CD: Production]
+    GitOpsRepo --> ArgoUAT[Argo CD：UAT]
+    GitOpsRepo --> ArgoProd[Argo CD：正式環境]
 
-    ArgoUAT --> UAT["kind-devops-uat\nhello-api-uat namespace"]
-    ArgoProd --> Prod["kind-devops-demo\nhello-api namespace"]
+    ArgoUAT --> UAT["kind-devops-uat\nnamespace：hello-api-uat"]
+    ArgoProd --> Prod["kind-devops-demo\nnamespace：hello-api"]
 
     UAT --> UATIngress["ingress-nginx\nuat.hello-api.test:8082"]
-    UAT --> UATApp["FastAPI Deployment\n2–3 replicas"]
+    UAT --> UATApp["FastAPI Deployment\n2–3 個 Pod"]
     UATApp --> UATDB["PostgreSQL StatefulSet"]
     UATDB --> UATPVC["1Gi PersistentVolumeClaim"]
 
     Prod --> ProdIngress["ingress-nginx\nhello-api.test:80"]
-    Prod --> ProdApp["FastAPI Deployment\n2–3 replicas"]
+    Prod --> ProdApp["FastAPI Deployment\n2–3 個 Pod"]
     ProdApp --> ProdDB["PostgreSQL StatefulSet"]
     ProdDB --> ProdPVC["1Gi PersistentVolumeClaim"]
 ```
 
-## Repository boundaries
+## Repository 職責邊界
 
-| Repository | Responsibility |
+| Repository | 職責 |
 |---|---|
-| [devops-hello-api](https://github.com/imthe71/devops-hello-api) | FastAPI source code, API tests, Dockerfile, and GitHub Actions workflows. |
-| [devops-hello-api-gitops](https://github.com/imthe71/devops-hello-api-gitops) | Helm chart, environment values, Argo CD Application declarations, bootstrap configuration, and operational documentation. |
+| [devops-hello-api](https://github.com/imthe71/devops-hello-api) | FastAPI 原始碼、API 測試、Dockerfile 與 GitHub Actions Workflow。 |
+| [devops-hello-api-gitops](https://github.com/imthe71/devops-hello-api-gitops) | Helm Chart、環境 values、Argo CD Application 宣告、Bootstrap 設定與維運文件。 |
 
-The application repository produces immutable container artifacts. The GitOps repository is the auditable desired-state source for cluster workloads.
+應用程式 Repository 負責產出不可變的容器 artifact；GitOps Repository 則是叢集工作負載唯一、可稽核的期望狀態來源。
 
-## Release model
+## 發版模型
 
 ```mermaid
 sequenceDiagram
-    participant Dev as Developer
-    participant App as Application Repository
+    participant Dev as 開發人員
+    participant App as 應用程式 Repo
     participant CI as GitHub Actions
-    participant GHCR as Private GHCR
-    participant GitOps as GitOps Repository
+    participant GHCR as 私有 GHCR
+    participant GitOps as GitOps Repo
     participant Argo as Argo CD
     participant K8s as Kubernetes
 
-    Dev->>App: Push feature revision
-    Dev->>CI: Dispatch UAT workflow with immutable revision
-    CI->>CI: Run tests and build image
-    CI->>GHCR: Push commit-SHA image tag
-    CI->>GitOps: Update values-uat.yaml
-    Argo->>GitOps: Detect desired-state commit
-    Argo->>K8s: Synchronize UAT resources
+    Dev->>App: 推送功能版本
+    Dev->>CI: 以指定 revision 手動觸發 UAT Workflow
+    CI->>CI: 執行測試並建置 Image
+    CI->>GHCR: 推送 commit-SHA Image Tag
+    CI->>GitOps: 更新 values-uat.yaml
+    Argo->>GitOps: 偵測期望狀態 Commit
+    Argo->>K8s: 同步 UAT 資源
 
-    Dev->>App: Merge approved pull request to main
-    CI->>CI: Run tests and build image
-    CI->>GHCR: Push commit-SHA image tag
-    CI->>GitOps: Update values.yaml
-    Argo->>GitOps: Detect desired-state commit
-    Argo->>K8s: Synchronize production resources
+    Dev->>App: 核准後合併 Pull Request 至 main
+    CI->>CI: 執行測試並建置 Image
+    CI->>GHCR: 推送 commit-SHA Image Tag
+    CI->>GitOps: 更新 values.yaml
+    Argo->>GitOps: 偵測期望狀態 Commit
+    Argo->>K8s: 同步正式環境資源
 ```
 
-- **UAT:** a selected branch, tag, or immutable commit SHA is deployed through the manual `Deploy selected revision to UAT` workflow.
-- **Production:** a merge to `main` runs the production workflow automatically.
-- Every deployment is traceable through the application commit, the GHCR image tag, the GitOps commit, and the Argo CD sync revision.
-- Rollback is performed by reverting the image tag in the relevant GitOps values file; Argo CD reconciles the target cluster to that revision.
+- **UAT：**透過手動的 `Deploy selected revision to UAT` Workflow，選擇 branch、tag 或不可變的 commit SHA。
+- **正式環境：**Pull Request 合併至 `main` 後，自動執行正式環境 Workflow。
+- 每次部署均可由應用程式 commit、GHCR image tag、GitOps commit 與 Argo CD sync revision 交叉追溯。
+- 回滾時，只需還原相應 GitOps values 檔中的 image tag；Argo CD 會將目標 Cluster 收斂回該 revision。
 
-## Environment topology
+## 環境拓樸
 
-| Environment | Cluster | Namespace | Application endpoint | Argo CD endpoint |
+| 環境 | Cluster | Namespace | 應用程式網址 | Argo CD 管理網址 |
 |---|---|---|---|---|
 | UAT | `kind-devops-uat` | `hello-api-uat` | `http://uat.hello-api.test:8082/` | `http://localhost:8083` |
-| Production | `kind-devops-demo` | `hello-api` | `http://hello-api.test/` | `http://localhost:8080` |
+| 正式環境 | `kind-devops-demo` | `hello-api` | `http://hello-api.test/` | `http://localhost:8080` |
 
-The two environments run in independently managed kind clusters. Each cluster has its own Argo CD instance and Sealed Secrets controller, keeping environment reconciliation and decryption scopes separate.
+兩個環境使用獨立管理的 kind Cluster。每個 Cluster 各自擁有 Argo CD 與 Sealed Secrets controller，因此同步與解密範圍彼此隔離。
 
-## GitOps components
+## GitOps 元件
 
-The Helm chart defines the following resources:
+Helm Chart 定義下列資源：
 
-| Component | Purpose |
+| 元件 | 用途 |
 |---|---|
-| Deployment | FastAPI workload, rolling-update policy, probes, resource requests/limits, and GHCR image pull configuration. |
-| Service and Ingress | Internal Service discovery and host-based HTTP routing through ingress-nginx. |
-| HPA and PDB | Baseline of two application replicas, scale-out to three replicas at 70% CPU utilization, and `minAvailable: 1` disruption protection. |
-| PostgreSQL StatefulSet | Stable database identity with a dedicated Service and persistent storage. |
-| PersistentVolumeClaim | 1Gi `ReadWriteOnce` storage per environment for PostgreSQL data. |
-| SealedSecret | Encrypted Git-stored configuration that is decrypted only in its owning cluster and namespace. |
+| Deployment | FastAPI 工作負載、Rolling Update 策略、Probe、資源 requests/limits 與 GHCR image pull 設定。 |
+| Service 與 Ingress | 叢集內服務發現，以及經 ingress-nginx 的 Host-based HTTP 路由。 |
+| HPA 與 PDB | 預設兩個應用程式 Replica、CPU 70% 時擴展至三個 Replica，以及 `minAvailable: 1` 的維護保護。 |
+| PostgreSQL StatefulSet | 具穩定識別的資料庫工作負載，以及專屬 Service 與持久化儲存。 |
+| PersistentVolumeClaim | 每個環境各自使用 1Gi `ReadWriteOnce` 儲存空間保存 PostgreSQL 資料。 |
+| SealedSecret | 以密文儲存於 Git，僅能由目標 Cluster 與 Namespace 中的 controller 解密。 |
 
-Production additionally applies topology spread across its two worker nodes. UAT uses the same application-level availability controls on a smaller node topology.
+正式環境額外套用 topology spread，將應用程式分散至兩個 Worker Node；UAT 則以較小的 Node 拓樸保留相同的應用程式可用性控制。
 
-## Secrets and image access
+## Secret 與 Image 存取
 
-- Container images are hosted in a private GHCR package.
-- Each namespace receives a `ghcr-pull` image pull Secret through a cluster-specific SealedSecret.
-- Runtime application configuration is injected from `hello-api-runtime` without storing plaintext values in Git.
-- PostgreSQL credentials are also rendered from an environment-specific SealedSecret.
-- The GitHub Actions cross-repository credential is stored as the `GITOPS_REPO_TOKEN` GitHub Actions secret and is not committed to either repository.
+- Container Image 儲存於私有 GHCR Package。
+- 每個 Namespace 透過 Cluster 專屬的 SealedSecret 取得 `ghcr-pull` imagePullSecret。
+- Runtime application configuration 由 `hello-api-runtime` 注入，Git 不保存明文。
+- PostgreSQL credential 同樣由環境專屬的 SealedSecret 產生。
+- 跨 Repository 的 GitHub Actions credential 儲存為 `GITOPS_REPO_TOKEN` GitHub Actions Secret，不提交至任一 Repository。
 
-## Data persistence
+## 資料持久化
 
-PostgreSQL is deployed as a single-replica StatefulSet with a `volumeClaimTemplates` entry. The StatefulSet recreates a failed database Pod with the same ordinal identity and reattaches the same PVC, so records survive a Pod restart.
+PostgreSQL 以單一 Replica 的 StatefulSet 部署，並透過 `volumeClaimTemplates` 建立 PersistentVolumeClaim。資料庫 Pod 發生故障時，StatefulSet 會以相同 ordinal 重建 Pod，並重新掛載原本的 PVC，因此資料可跨 Pod 重建保留。
 
-The UAT application revision includes `/db-status` and `/notes` endpoints to verify database connectivity and persistence without exposing credentials. The detailed persistence test procedure is in [the PostgreSQL PVC runbook](runbooks/postgresql-pvc.md).
+UAT 的應用程式版本提供 `/db-status` 與 `/notes` API，用於驗證資料庫連線與持久化，但不會回傳 credential。完整測試步驟請見 [PostgreSQL PVC 維運手冊](runbooks/postgresql-pvc.md)。
 
-## Verification
+## 驗證方式
 
 ```powershell
-# UAT resources
+# UAT 資源
 kubectl --context kind-devops-uat -n hello-api-uat get deploy,pods,svc,ingress,hpa,pdb,sts,pvc
 
-# Production resources
+# 正式環境資源
 kubectl --context kind-devops-demo -n hello-api get deploy,pods,svc,ingress,hpa,pdb,sts,pvc
 
-# UAT application and PostgreSQL connectivity
+# UAT 應用程式與 PostgreSQL 連線
 curl.exe -H "Host: uat.hello-api.test" http://127.0.0.1:8082/healthz
 curl.exe -H "Host: uat.hello-api.test" http://127.0.0.1:8082/db-status
 curl.exe -H "Host: uat.hello-api.test" http://127.0.0.1:8082/notes
 ```
 
-## Local-environment scope
+## 本地環境範圍
 
-The local implementation demonstrates GitOps reconciliation, workload availability, environment separation, private registry access, encrypted configuration, and persistent storage. Both kind clusters share one Docker Desktop host; cloud production deployment can extend this model with multi-zone node pools, Cluster Autoscaler, managed PostgreSQL, and an external secret store.
+本地實作展示 GitOps 收斂、工作負載可用性、環境隔離、私有 Registry 存取、加密設定與持久化儲存。兩個 kind Cluster 共用同一台 Docker Desktop Host；雲端正式環境可延伸為多可用區 Node Pool、Cluster Autoscaler、受管 PostgreSQL 與外部 Secret Store。

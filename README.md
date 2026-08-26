@@ -1,14 +1,14 @@
 # Hello API GitOps
 
-This repository is the desired-state source for the Hello DevOps API.
+此 Repository 是 Hello API 的期望狀態（desired state）來源，管理 Kubernetes 應用程式、環境差異與 GitOps 交付設定。
 
-Architecture, delivery flow, security boundaries, and verification are documented in [System Architecture and Delivery Flow](docs/system-overview.md).
+系統架構、交付流程、安全邊界與驗證方式請見：[系統架構與交付流程](docs/system-overview.md)。
 
 ```mermaid
 flowchart LR
-  A["App Repo: FastAPI"] -->|"GitHub Actions: build, test, push"| B["GHCR image"]
-  A -->|"Commit new image tag"| C["GitOps Repo: Helm"]
-  C -->|"Watch and auto-sync"| D["ArgoCD"]
+  A["應用程式 Repo：FastAPI"] -->|"GitHub Actions：測試、建置、推送"| B["私有 GHCR Image"]
+  A -->|"提交新的 Image Tag"| C["GitOps Repo：Helm"]
+  C -->|"監控與自動同步"| D["Argo CD"]
   D --> E["kind Kubernetes"]
   U["Browser / curl"] -->|"hello-api.test"| I["ingress-nginx"]
   I --> S["Service"]
@@ -22,51 +22,49 @@ flowchart LR
   E --> P2
 ```
 
-## Components
+## 元件
 
-- Helm chart: Deployment, Service, Ingress, PodDisruptionBudget, a CPU-based HorizontalPodAutoscaler (HPA), PostgreSQL StatefulSet/Service/PVC, plus environment-scoped SealedSecrets.
-- Deployment and HPA: baseline is two replicas; HPA scales from `2` to `3` at `70%` average CPU utilization. Resource requests provide the utilization baseline, and startup/liveness/readiness probes protect availability. UAT uses zero-unavailable rolling updates. Production uses hard topology spread across its two workers with a one-at-a-time rollout (`maxUnavailable: 1`, `maxSurge: 0`) protected by `PDB minAvailable: 1`; at three replicas it has a balanced `2 + 1` Worker placement.
-- Argo CD Application: watches this repository and reconciles changes into its target namespace. It explicitly leaves `Deployment.spec.replicas` to the HPA, so automated self-heal does not reset autoscaled replica counts.
-- Sealed Secrets: each Cluster runs a `sealed-secrets-controller`. Git stores only environment-scoped ciphertext; the controller creates the `hello-api-runtime` Kubernetes Secret that supplies `APP_DEMO_TOKEN` to the application.
+- Helm Chart：Deployment、Service、Ingress、PodDisruptionBudget、以 CPU 為基礎的 HorizontalPodAutoscaler（HPA）、PostgreSQL StatefulSet/Service/PVC，以及環境專屬 SealedSecret。
+- Deployment 與 HPA：預設兩個 Replica，於平均 CPU 使用率 `70%` 時由 `2` 擴展至 `3`。Resource request 提供 HPA 計算基礎；startup/liveness/readiness Probe 提供可用性保護。UAT 使用零不可用的 Rolling Update。正式環境藉由 topology spread 跨兩個 Worker 分散，採逐一更新（`maxUnavailable: 1`、`maxSurge: 0`）並由 `PDB minAvailable: 1` 保護；三個 Replica 時的分布為 `2 + 1`。
+- Argo CD Application：監控此 Repository 並將變更收斂至目標 Namespace。它明確忽略由 HPA 控制的 `Deployment.spec.replicas` 差異，因此自動修復不會覆寫擴縮結果。
+- Sealed Secrets：每個 Cluster 均執行 `sealed-secrets-controller`。Git 僅保存環境專屬密文；controller 會在 Cluster 內建立 `hello-api-runtime` Kubernetes Secret，供應用程式取得 `APP_DEMO_TOKEN`。
 
-## Local topology
+## 本地拓樸
 
-The local proof-of-concept uses two independently managed kind clusters.
+本地驗證環境包含兩個獨立管理的 kind Cluster：
 
 ```text
-kind-devops-demo (production)
+kind-devops-demo（正式環境）
 ├─ control-plane
 ├─ worker
 └─ worker2
 
-kind-devops-uat (UAT)
+kind-devops-uat（UAT）
 ├─ control-plane
 └─ worker
 ```
 
-- Production ingress: `http://hello-api.test/` (host port `80`)
-- UAT ingress: `http://uat.hello-api.test:8082/` (host port `8082`)
-- Production Argo CD: `http://localhost:8080`
-- UAT Argo CD: `http://localhost:8083`
+- 正式環境 Ingress：`http://hello-api.test/`（Host port `80`）
+- UAT Ingress：`http://uat.hello-api.test:8082/`（Host port `8082`）
+- 正式環境 Argo CD：`http://localhost:8080`
+- UAT Argo CD：`http://localhost:8083`
 
-Add these mappings to the Windows hosts file when you want browser-friendly
-hostnames:
+若需使用本地網域，請將下列內容加入 Windows hosts 檔：
 
 ```text
 127.0.0.1 hello-api.test
 127.0.0.1 uat.hello-api.test
 ```
 
-## Bootstrap and verification
+## 初始化與驗證
 
-The existing production cluster is created from `kind-config.yaml`. Create a
-separate UAT cluster with the additional configuration:
+正式環境 Cluster 由 `kind-config.yaml` 建立；UAT 則使用額外的設定檔：
 
 ```powershell
 kind create cluster --name devops-uat --config kind-config-uat.yaml
 
-# Install the Sealed Secrets CRD and controller in both clusters before Argo
-# applies the Helm chart. The script pins controller release v0.39.1.
+# 在 Argo 套用 Helm Chart 前，於兩個 Cluster 安裝 Sealed Secrets CRD 與 controller。
+# 此 script 固定使用 controller release v0.39.1。
 .\bootstrap\install-sealed-secrets.ps1
 
 helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx `
@@ -74,7 +72,7 @@ helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx `
   --kube-context kind-devops-uat `
   --values bootstrap/ingress-nginx-values.yaml --wait
 
-# Install Metrics Server in each cluster; required by HPA and K9s CPU/MEM views.
+# 在每個 Cluster 安裝 Metrics Server，供 HPA 與 K9s CPU/MEM 檢視使用。
 helm upgrade --install metrics-server metrics-server/metrics-server `
   --namespace kube-system --kube-context kind-devops-uat `
   --values bootstrap/metrics-server-values.yaml --wait
@@ -88,73 +86,54 @@ kubectl --context kind-devops-uat apply --server-side --force-conflicts `
 kubectl --context kind-devops-uat apply -f argocd/application-uat.yaml
 ```
 
-Keep each Argo CD Application in its owning cluster:
+每個 Argo CD Application 應套用到所屬的 Cluster：
 
 ```powershell
-# UAT only
+# 僅 UAT Cluster
 kubectl --context kind-devops-uat apply -f argocd/application-uat.yaml
 
-# Production only
+# 僅正式環境 Cluster
 kubectl --context kind-devops-demo apply -f argocd/application.yaml
 ```
 
-Verify workload health without depending on the Windows hosts mapping:
+以下指令無須依賴 Windows hosts 對應即可驗證工作負載：
 
 ```powershell
 curl.exe -H "Host: uat.hello-api.test" http://127.0.0.1:8082/healthz
 curl.exe -H "Host: hello-api.test" http://127.0.0.1/healthz
 
-# Watch autoscaling in either environment.
+# 觀察任一環境的自動擴縮。
 kubectl --context kind-devops-uat -n hello-api-uat get hpa,pods -w
 kubectl --context kind-devops-demo -n hello-api get hpa,pods -w
 ```
 
-## Secret lifecycle
+## Secret 生命週期
 
-- `chart/values.yaml` and `chart/values-uat.yaml` contain only encrypted
-  `APP_DEMO_TOKEN` values. Each ciphertext is bound to its exact Secret name
-  and namespace, and is generated with the public certificate of its owning
-  Cluster.
-- The plaintext exists only when creating or rotating the Secret; do not commit
-  a Kubernetes `Secret` manifest, a `.env` file, or a plaintext values file.
-- To rotate a value, generate a new `SealedSecret` with `kubeseal` against the
-  target Cluster, replace that environment's `encryptedValue`, commit it, and
-  let Argo CD sync. Rotation creates a new Deployment revision because the
-  injected Secret reference remains available during the rollout.
+- `chart/values.yaml` 與 `chart/values-uat.yaml` 僅包含加密的 `APP_DEMO_TOKEN`。每段密文皆綁定目標 Cluster 的公鑰、特定 Secret 名稱與 Namespace。
+- 明文只會在建立或輪替 Secret 時出現；不得提交 Kubernetes `Secret` manifest、`.env` 或明文 values 檔。
+- 若需輪替 Secret，應使用目標 Cluster 的公開憑證透過 `kubeseal` 產生新的 `SealedSecret`，替換相應環境的 `encryptedValue`，再提交 Git 由 Argo CD 同步。由於 Deployment 在 rollout 時仍可取得 Secret reference，輪替會建立新的 Deployment revision。
 
-## Future EKS secret architecture
+## 未來 EKS Secret 架構
 
-The accepted EKS design is AWS Secrets Manager with EKS Pod Identity and the
-Secrets Store CSI Driver. Runtime secrets will be mounted as read-only files at
-`/mnt/secrets-store`; the GitHub Actions Runner will deploy references only and
-will not read runtime secret values. See
-[`docs/adr/0001-aws-secrets-manager-csi.md`](docs/adr/0001-aws-secrets-manager-csi.md)
-for the IAM boundaries, RD contract, rotation, verification, and rollback plan.
+規劃的 EKS 架構為 AWS Secrets Manager、EKS Pod Identity 與 Secrets Store CSI Driver。Runtime Secret 將以唯讀檔案掛載於 `/mnt/secrets-store`；GitHub Actions Runner 只部署 reference，不讀取 Runtime Secret 值。IAM 邊界、RD 使用規約、輪替、驗證與回滾請見 [`docs/adr/0001-aws-secrets-manager-csi.md`](docs/adr/0001-aws-secrets-manager-csi.md)。
 
-## Implementation note
+## 實作說明
 
-The cross-repository CI update uses the `GITOPS_REPO_TOKEN` GitHub Actions secret. It should be a fine-grained token limited to `Contents: Read and write` for this GitOps repository.
+跨 Repository 的 CI 更新使用 GitHub Actions Secret `GITOPS_REPO_TOKEN`。建議使用 fine-grained token，並僅授與 GitOps Repository 的 `Contents: Read and write` 權限。
 
-## Challenge and resolution
+## 挑戰與處理方式
 
-The local topology demonstrates Pod-level resilience in UAT and Worker-level placement resilience in production through two baseline replicas, readiness gates, a PDB, topology spread, and HPA. Both kind clusters still use one Docker Desktop host, so physical-host or availability-zone resilience belongs to a production cluster design.
-## UAT and production release flow
+本地拓樸透過 UAT 的 Pod 層韌性，以及正式環境跨 Worker 的 placement 韌性，展示兩個基準 Replica、readiness gate、PDB、topology spread 與 HPA。兩個 kind Cluster 仍共用同一個 Docker Desktop Host，因此實體 Host 或 Availability Zone 層級的韌性屬於雲端正式環境設計範圍。
 
-- UAT Application: `hello-api-uat` in the `hello-api-uat` namespace of
-  `kind-devops-uat`, using `chart/values-uat.yaml` and
-  `http://uat.hello-api.test:8082/`.
-- Production Application: `hello-api` in the `hello-api` namespace of
-  `kind-devops-demo`, using `chart/values.yaml` and `http://hello-api.test/`.
+## UAT 與正式環境交付流程
 
-1. Push a feature branch: CI runs tests only.
-2. In the App Repo Actions page, run "Deploy selected revision to UAT" and enter
-   the feature branch, tag, or immutable commit SHA. The workflow tests, builds,
-   publishes, and writes that image tag to values-uat.yaml.
-3. Argo CD deploys the GitOps commit automatically to UAT.
-4. After UAT acceptance, merge the pull request into main.
-5. The main CI tests, builds, publishes, and writes the resulting image tag to
-   values.yaml. Argo CD then deploys it automatically to production.
+- UAT Application：`kind-devops-uat` 的 `hello-api-uat` Namespace，使用 `chart/values-uat.yaml` 與 `http://uat.hello-api.test:8082/`。
+- 正式環境 Application：`kind-devops-demo` 的 `hello-api` Namespace，使用 `chart/values.yaml` 與 `http://hello-api.test/`。
 
-The same GitOps repository remains the auditable desired-state source for both
-environments. The App Repo uses the GITOPS_REPO_TOKEN secret with Contents:
-Read and write permission only for this GitOps repository.
+1. 推送功能 Branch：CI 僅執行測試。
+2. 在 App Repository 的 Actions 頁面執行 `Deploy selected revision to UAT`，輸入 feature branch、tag 或不可變 commit SHA。Workflow 會測試、建置、推送 Image，並更新 `values-uat.yaml`。
+3. Argo CD 自動將 GitOps Commit 部署到 UAT。
+4. UAT 驗收完成後，將 Pull Request 合併至 `main`。
+5. `main` CI 會測試、建置、推送 Image，並更新 `values.yaml`；Argo CD 隨後自動部署至正式環境。
+
+同一個 GitOps Repository 持續作為兩個環境可稽核的期望狀態來源。App Repository 使用僅具該 GitOps Repository `Contents: Read and write` 權限的 `GITOPS_REPO_TOKEN` Secret。
