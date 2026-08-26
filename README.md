@@ -84,6 +84,7 @@ curl.exe -H "Host: uat.hello-api.test" http://127.0.0.1:8082/db-status
 
 - 私有 GHCR 不允許 Kubernetes 直接拉 Image，因此每個環境各自建立 `ghcr-pull`。這個設定以 SealedSecret 存在 Git，明文不會被提交。
 - UAT 與正式環境是兩個獨立 Cluster，SealedSecret 的加密內容不能共用。每個環境都使用自己的 controller 金鑰與 Namespace 設定。
+
 ## 注意事項
 
 - UAT 有 1 個 Worker Node，主要用來驗證功能與發版流程；正式環境有 2 個 Worker Node，應用程式 Pod 可以分散部署。UAT 不具備 Worker Node 層級的 HA，正式環境則可承受單一 Worker 的維護或故障。
