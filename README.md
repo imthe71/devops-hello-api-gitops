@@ -2,6 +2,8 @@
 
 This repository is the desired-state source for the Hello DevOps API.
 
+面試展示導覽與逐檔說明請見 [docs/interview-showcase.md](docs/interview-showcase.md)。
+
 ```mermaid
 flowchart LR
   A["App Repo: FastAPI"] -->|"GitHub Actions: build, test, push"| B["GHCR image"]
@@ -12,6 +14,9 @@ flowchart LR
   I --> S["Service"]
   S --> P1["FastAPI Pod 1"]
   S --> P2["FastAPI Pod 2"]
+  P1 --> DB["PostgreSQL StatefulSet"]
+  P2 --> DB
+  DB --> PVC["1Gi PVC"]
   E --> I
   E --> P1
   E --> P2
@@ -19,7 +24,7 @@ flowchart LR
 
 ## Components
 
-- Helm chart: Deployment, Service, Ingress, PodDisruptionBudget, and a CPU-based HorizontalPodAutoscaler (HPA).
+- Helm chart: Deployment, Service, Ingress, PodDisruptionBudget, a CPU-based HorizontalPodAutoscaler (HPA), PostgreSQL StatefulSet/Service/PVC, plus environment-scoped SealedSecrets.
 - Deployment and HPA: baseline is two replicas; HPA scales from `2` to `3` at `70%` average CPU utilization. Resource requests provide the utilization baseline, and startup/liveness/readiness probes protect availability. UAT uses zero-unavailable rolling updates. Production uses hard topology spread across its two workers with a one-at-a-time rollout (`maxUnavailable: 1`, `maxSurge: 0`) protected by `PDB minAvailable: 1`; at three replicas it has a balanced `2 + 1` Worker placement.
 - Argo CD Application: watches this repository and reconciles changes into its target namespace. It explicitly leaves `Deployment.spec.replicas` to the HPA, so automated self-heal does not reset autoscaled replica counts.
 - Sealed Secrets: each Cluster runs a `sealed-secrets-controller`. Git stores only environment-scoped ciphertext; the controller creates the `hello-api-runtime` Kubernetes Secret that supplies `APP_DEMO_TOKEN` to the application.
@@ -41,8 +46,8 @@ kind-devops-uat (UAT)
 
 - Production ingress: `http://hello-api.test/` (host port `80`)
 - UAT ingress: `http://uat.hello-api.test:8082/` (host port `8082`)
-- Production Argo CD: `https://localhost:8080`
-- UAT Argo CD: `https://localhost:8083`
+- Production Argo CD: `http://localhost:8080`
+- UAT Argo CD: `http://localhost:8083`
 
 Add these mappings to the Windows hosts file when you want browser-friendly
 hostnames:
