@@ -1,6 +1,6 @@
 # Hello API GitOps
 
-這個 Repository 放的是 Kubernetes 的「應該長什麼樣子」：應用程式版本、環境設定、網路、擴縮、資料庫與 Secret 設定都由 Git 管理，再交給 Argo CD 自動套用。
+此 Repository 集中管理 Hello API 的 Kubernetes 部署設定，包括 Helm Chart、UAT／正式環境差異、網路、擴縮、資料庫與 Secret。Argo CD 會依照這些設定，自動同步到對應的 Cluster。
 
 詳細架構圖請見：[系統架構與交付流程](docs/system-overview.md)。
 
