@@ -2,7 +2,7 @@
 
 This repository is the desired-state source for the Hello DevOps API.
 
-面試展示導覽與逐檔說明請見 [docs/interview-showcase.md](docs/interview-showcase.md)。
+Architecture, delivery flow, security boundaries, and verification are documented in [System Architecture and Delivery Flow](docs/system-overview.md).
 
 ```mermaid
 flowchart LR
